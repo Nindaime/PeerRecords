@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimaryDark">#004FAC</color>
+    <color name="colorPrimary">#57A4FF</color>
+    <color name="colorAccent">#021224</color>
+
+
+    <color name="themeBlue">#004FAC</color>
+    <color name="themeDarkGreen">#0E6B34</color>
+    <color name="editTextRingGrey">#9EA69C</color>
+    <color name="offWhiteBack">#ECF0EB</color>
+
+
+
+    <color name="themeYellow">#C2C257</color>
+    <color name="themeDarkYellow">#7B7B35</color>
+    <color name="themeLightBlue">#57A4FF</color>
+    <color name="themeGrey">#707071</color>
+    <color name="themeLightGrey">#eeeeee</color>
+
+
+    <color name="black">#000000</color>
+    <color name="transparentBlack">#99000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="transparentWhite">#99FFFFFF</color>
+    <color name="transparent">#00000000</color>
+    <color name="offBlack">#252424</color>
+    <color name="veryLightBlueBack">#DEE7EE</color>
+    <color name="translucentWhite">#F2FFFFFF</color>
+</resources>

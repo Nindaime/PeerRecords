@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <!-- SPLASH THEME -->
+    <style name="SplashTheme" parent="AppTheme">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+
+    <!-- ON BOARD THEME -->
+    <style name="OnBoardTheme" parent="AppTheme">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/white</item>
+    </style>
+
+    <!-- WHITE ACCENT THEME -->
+    <style name="WhiteAccentTheme" parent="AppTheme">
+        <item name="colorAccent">@color/white</item>
+    </style>
+
+
+    <!--  LOADING DIALOG THEME  -->
+    <style name="LoadingDialogTheme" parent="Theme.AppCompat.Dialog">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:windowBackground">@color/transparentBlack</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+
+    <!--  DIALOG APPEARANCE THEME  -->
+    <style name="PauseDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/scale_in</item>
+        <item name="android:windowExitAnimation">@anim/scale_out</item>
+    </style>
+
+    <!--  DIALOG THEME  -->
+    <style name="WrapDialogTheme" parent="Theme.AppCompat.Dialog">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:windowBackground">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:layout_gravity">bottom</item>
+        <item name="android:gravity">bottom</item>
+    </style>
+
+    <!--  DIALOG THEME  -->
+    <style name="DialogTheme" parent="Theme.AppCompat.Dialog">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">fill_parent</item>
+        <item name="android:windowBackground">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:layout_gravity">bottom</item>
+        <item name="android:gravity">bottom</item>
+    </style>
+
+    <!--  DIALOG APPEARANCE THEME  -->
+    <style name="SlideDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/goup</item>
+        <item name="android:windowExitAnimation">@anim/godown</item>
+    </style>
+
+    <!--  PROGRESS THEME -->
+    <style name="ProgressTheme" parent="AppTheme">
+        <item name="colorAccent">@color/white</item>
+    </style>
+
+    <!--  AUTH SPINNER THEME  -->
+    <style name="SpinnerTheme" parent="android:Widget.Spinner">
+        <item name="android:background">@drawable/custom_spinner</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <!--  AUTH RING SPINNER THEME  -->
+    <style name="RingSpinnerTheme" parent="android:Widget.Spinner">
+        <item name="android:background">@drawable/custom_ring_spinner</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+</resources>
