@@ -54,7 +54,6 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.LogViewHolder> {
         holder.logLogin.setText("Logged in: " + currentLog.getLogin_timestamp());
         holder.logLogout.setText("Logged out: " + currentLog.getLogout_timestamp());
 
-
     }
 
     @Override
