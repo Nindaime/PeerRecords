@@ -11,6 +11,12 @@ import android.os.Bundle;
 import com.squareup.picasso.OkHttp3Downloader;
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import esw.peeplotech.peerrecords.R;
+import esw.peeplotech.peerrecords.models.Record;
+import esw.peeplotech.peerrecords.models.Student;
 import io.paperdb.Paper;
 
 public class AppClass extends Application {
@@ -35,6 +41,11 @@ public class AppClass extends Application {
 
         //set activity listener
         setupActivityListener();
+
+        //init students
+        if (Paper.book().read(Common.STUDENTS_LIST) == null) {
+            initStudents();
+        }
 
     }
 
@@ -79,6 +90,30 @@ public class AppClass extends Application {
             public void onActivityDestroyed(Activity activity) {
             }
         });
+    }
+
+    private void initStudents() {
+
+        //create student list
+        List<Student> studentList = new ArrayList<>();
+
+        //create record list
+        List<Record> recordList = new ArrayList<>();
+
+        //create students
+        studentList.add(new Student("AdeolaKoker", "Adeola Koker", R.drawable.adeola, "Computer Science", recordList));
+        studentList.add(new Student("AyoSimon", "Ayo Simon", R.drawable.ayo, "Cell Biology and Genetics", recordList));
+        studentList.add(new Student("CarlyShay", "Carly Shay", R.drawable.carly, "English Education", recordList));
+        studentList.add(new Student("DamiDave", "Damilola David", R.drawable.dami, "Mass Communication", recordList));
+        studentList.add(new Student("JessRobb", "Jessica Robert", R.drawable.jess, "Industrial Chemistry", recordList));
+        studentList.add(new Student("SaintLammy", "Lamide Agboola", R.drawable.lamide, "Arts and Cultural Education", recordList));
+        studentList.add(new Student("ModupeMary", "Modupe Afolabi", R.drawable.modupe, "International Relations", recordList));
+        studentList.add(new Student("TatePower", "Ian Tate", R.drawable.tate, "Business Administration", recordList));
+        studentList.add(new Student("Tejj26", "Tejj Parker", R.drawable.tejj, "History and Strategic Studies", recordList));
+
+        //save to local
+        Paper.book().write(Common.STUDENTS_LIST, studentList);
+
     }
 }
 

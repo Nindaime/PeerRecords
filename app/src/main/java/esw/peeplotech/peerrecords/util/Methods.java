@@ -15,8 +15,8 @@ public class Methods {
 
     //get today's date
     @SuppressLint("SimpleDateFormat")
-    public static String getTodayDate(){
-        return new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
+    public static String getTimestamp(){
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(Calendar.getInstance().getTime());
     }
 
 }

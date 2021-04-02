@@ -13,6 +13,7 @@
 
 
     <color name="themeYellow">#C2C257</color>
+    <color name="themeRed">#BF2626</color>
     <color name="themeDarkYellow">#7B7B35</color>
     <color name="themeLightBlue">#57A4FF</color>
     <color name="themeGrey">#707071</color>

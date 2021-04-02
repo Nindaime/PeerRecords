@@ -17,6 +17,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
@@ -51,8 +52,8 @@ import esw.peeplotech.peerrecords.databases.Database;
 import esw.peeplotech.peerrecords.databinding.ActivityRegisterBinding;
 import esw.peeplotech.peerrecords.models.User;
 import esw.peeplotech.peerrecords.staff.StaffDashboard;
-import esw.peeplotech.peerrecords.students.StudentDashboard;
 import esw.peeplotech.peerrecords.util.Common;
+import esw.peeplotech.peerrecords.util.Methods;
 import io.paperdb.Paper;
 
 public class Register extends AppCompatActivity {
@@ -61,7 +62,9 @@ public class Register extends AppCompatActivity {
     private ActivityRegisterBinding activityBinding;
 
     //values
-    private String selectedType, selectedSector;
+    private String selectedSector;
+    private String sessionToken = "";
+    private String android_id;
 
     //loading
     private AlertDialog theDialog, studentDialog, staffDialog;
@@ -84,8 +87,11 @@ public class Register extends AppCompatActivity {
 
     private void initialize() {
 
-        //populate user spinner
-        populateTypeSpinner();
+        //generate session token
+        generateSessionToken();
+
+        //device id
+        android_id = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
 
         //back
         activityBinding.backButton.setOnClickListener(v -> onBackPressed());
@@ -112,6 +118,25 @@ public class Register extends AppCompatActivity {
 
         //register
         activityBinding.registerBtn.setOnClickListener(v -> validateParams());
+
+    }
+
+    private void generateSessionToken() {
+
+        //set token
+        String tempToken = generateRandomToken();
+
+        //get token
+        if (!new Database(this).isConnectionIdInUse(tempToken)){
+
+            sessionToken = tempToken;
+
+        } else {
+
+            generateSessionToken();
+
+        }
+
 
     }
 
@@ -142,12 +167,6 @@ public class Register extends AppCompatActivity {
             activityBinding.confirmPassword.requestFocus();
             activityBinding.confirmPassword.setError("mismatch");
 
-        } else
-
-        if (TextUtils.isEmpty(selectedType)){
-
-            Toast.makeText(this, "Please, identify what type of user you are", Toast.LENGTH_SHORT).show();
-
         } else {
 
             registerUser(theUsername, thePassword);
@@ -165,18 +184,10 @@ public class Register extends AppCompatActivity {
         if (!new Database(this).userExists(theUsername)){
 
             //register new user
-            new Database(this).registerNewUser(theUsername, thePassword, selectedType, imageLink);
+            new Database(this).registerNewUser(theUsername, thePassword, imageLink);
 
             //show finish dialog
-            if (selectedType.equals(Common.USER_TYPE_STUDENT)){
-
-                openStudentDialog(theUsername);
-
-            } else {
-
-                openStaffDialog(theUsername);
-
-            }
+            openStaffDialog(theUsername);
 
         } else {
 
@@ -305,106 +316,6 @@ public class Register extends AppCompatActivity {
         return generatedString;
     }
 
-    private void populateTypeSpinner() {
-
-        //list
-        final List<String> userList = new ArrayList<>();
-        userList.add(0, "User Type");
-        userList.add(1, Common.USER_TYPE_STAFF);
-        userList.add(2, Common.USER_TYPE_STUDENT);
-
-        //adapter
-        final ArrayAdapter<String> dataAdapterUser;
-        dataAdapterUser = new ArrayAdapter(this, R.layout.custom_spinner_list_item, userList);
-        dataAdapterUser.setDropDownViewResource(R.layout.custom_spinner_dropdown_item);
-
-        //set adapter
-        activityBinding.userType.setAdapter(dataAdapterUser);
-        dataAdapterUser.notifyDataSetChanged();
-
-        //selector
-        activityBinding.userType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
-                if (!parent.getItemAtPosition(position).toString().equals("User Type")) {
-
-                    selectedType = parent.getItemAtPosition(position).toString();
-
-                }
-
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-    }
-
-    private void openStudentDialog(String username) {
-
-        studentDialog = new AlertDialog.Builder(this, R.style.DialogTheme).create();
-        LayoutInflater inflater = this.getLayoutInflater();
-        View viewOptions = inflater.inflate(R.layout.register_student_layout,null);
-
-        //widgets
-        EditText matricNumber = viewOptions.findViewById(R.id.matricNumber);
-        EditText department = viewOptions.findViewById(R.id.department);
-        RelativeLayout completeBtn = viewOptions.findViewById(R.id.completeBtn);
-
-
-        //add view properties
-        studentDialog.setView(viewOptions);
-        studentDialog.getWindow().getAttributes().windowAnimations = R.style.SlideDialogAnimation;
-        studentDialog.getWindow().setGravity(Gravity.BOTTOM);
-        studentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-        //add windows properties
-        WindowManager.LayoutParams layoutParams = studentDialog.getWindow().getAttributes();
-        studentDialog.getWindow().setAttributes(layoutParams);
-
-        //show dialog
-        studentDialog.show();
-
-        //add
-        completeBtn.setOnClickListener(v -> {
-
-            //validate
-            String theMatric = matricNumber.getText().toString().trim();
-            String theDept = department.getText().toString().trim();
-
-            //check
-            if (TextUtils.isEmpty(theMatric)){
-
-                matricNumber.requestFocus();
-                matricNumber.setError("required");
-
-            } else
-
-            if (TextUtils.isEmpty(theDept)){
-
-                department.requestFocus();
-                department.setError("required");
-
-            } else {
-
-                //register student
-                new Database(this).registerNewStudent(username, theMatric, theDept);
-
-                //dismiss dialog
-                studentDialog.dismiss();
-
-                //update
-                updateUI(username);
-
-            }
-
-        });
-
-    }
-
     private void openStaffDialog(String username) {
 
         staffDialog = new AlertDialog.Builder(this, R.style.DialogTheme).create();
@@ -433,10 +344,9 @@ public class Register extends AppCompatActivity {
         final List<String> sectorList = new ArrayList<>();
         sectorList.add(0, "Job Sector");
         sectorList.add(1, Common.SECTOR_ACADEMIC);
-        sectorList.add(2, Common.SECTOR_ADMIN);
-        sectorList.add(3, Common.SECTOR_BURSARY);
-        sectorList.add(4, Common.SECTOR_HOSTEL);
-        sectorList.add(5, Common.SECTOR_SPORT);
+        sectorList.add(2, Common.SECTOR_HOSTEL);
+        sectorList.add(3, Common.SECTOR_CLASS);
+        sectorList.add(4, Common.SECTOR_BURSARY);
 
         //adapter
         final ArrayAdapter<String> dataAdapterUser;
@@ -487,7 +397,7 @@ public class Register extends AppCompatActivity {
             } else {
 
                 //register student
-                new Database(this).registerNewStaff(username, theStaffId, selectedSector);
+                new Database(this).registerNewStaff(username, selectedSector, theStaffId);
 
                 //dismiss dialog
                 staffDialog.dismiss();
@@ -503,23 +413,19 @@ public class Register extends AppCompatActivity {
 
     private void updateUI(String username) {
 
+        //sign in session
+        new Database(this).createNewSession(sessionToken, username, android_id, 0, 0, Methods.getTimestamp(), "");
+
         //get user data
         User currentUser = new Database(this).getUserDetails(username);
 
         //store in local
         Paper.book().write(Common.USER_ID, currentUser.getUsername());
-        Paper.book().write(Common.USER_TYPE, currentUser.getUser_type());
         Paper.book().write(Common.CURRENT_USER, currentUser);
+        Paper.book().write(Common.CURRENT_SESSION, sessionToken);
 
         //check
-        Intent dashboardIntent = null;
-
-        if (selectedType.equals(Common.USER_TYPE_STUDENT)){
-            dashboardIntent = new Intent(this, StudentDashboard.class);
-        } else {
-            dashboardIntent = new Intent(this, StaffDashboard.class);
-        }
-
+        Intent dashboardIntent =  new Intent(this, StaffDashboard.class);
         dashboardIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(dashboardIntent);
         finish();
