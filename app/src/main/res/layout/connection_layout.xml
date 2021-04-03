@@ -16,6 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            android:animateLayoutChanges="true"
             android:layout_margin="20dp">
 
             <TextView
@@ -27,7 +28,17 @@
                 android:textColor="@color/black"
                 android:textStyle="bold"/>
 
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp">
 
+                <androidx.recyclerview.widget.RecyclerView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/deviceRecycler"/>
+
+            </RelativeLayout>
 
             <View
                 android:layout_width="match_parent"
@@ -44,13 +55,14 @@
                 android:layout_marginTop="55dp"
                 android:animateLayoutChanges="true"
                 android:background="@drawable/btn_solid_green_ripple"
-                android:id="@+id/joinConnectionBtn">
+                android:id="@+id/joinConnectionBtn"
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
-                    android:text="Join Connection"
+                    android:text="Find Connection"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textStyle="bold"
@@ -75,40 +87,9 @@
                 android:layout_gravity="center"
                 android:layout_marginTop="15dp"
                 android:animateLayoutChanges="true"
-                android:background="@drawable/btn_solid_green_ripple"
-                android:id="@+id/hostConnectionBtn">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerInParent="true"
-                    android:text="Host Connection"
-                    android:textAllCaps="false"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:textSize="17sp"
-                    android:id="@+id/hostConnectionText"/>
-
-                <com.wang.avi.AVLoadingIndicatorView
-                    style="@style/AVLoadingIndicatorView"
-                    android:layout_width="25dp"
-                    android:layout_height="25dp"
-                    android:layout_centerInParent="true"
-                    app:indicatorColor="@color/white"
-                    android:visibility="invisible"
-                    app:indicatorName="LineSpinFadeLoaderIndicator"
-                    android:id="@+id/hostConnectionProgress"/>
-
-            </RelativeLayout>
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center"
-                android:layout_marginTop="15dp"
-                android:animateLayoutChanges="true"
                 android:background="@drawable/btn_solid_red_ripple"
-                android:id="@+id/disconnectBtn">
+                android:id="@+id/disconnectBtn"
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="wrap_content"

@@ -1,15 +1,34 @@
 package esw.peeplotech.peerrecords.staff;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.wifi.WifiManager;
+import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pInfo;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,21 +36,41 @@ import android.view.WindowManager;
 import android.widget.PopupMenu;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.wang.avi.AVLoadingIndicatorView;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
+
 import esw.peeplotech.peerrecords.R;
 import esw.peeplotech.peerrecords.SignIn;
+import esw.peeplotech.peerrecords.adapters.DeviceAdapter;
 import esw.peeplotech.peerrecords.databases.Database;
 import esw.peeplotech.peerrecords.databinding.ActivityStaffDashboardBinding;
 import esw.peeplotech.peerrecords.fragments.AllRecords;
 import esw.peeplotech.peerrecords.fragments.MyRecords;
+import esw.peeplotech.peerrecords.interfaces.DeviceListener;
+import esw.peeplotech.peerrecords.models.Record;
 import esw.peeplotech.peerrecords.models.User;
+import esw.peeplotech.peerrecords.receivers.WifiDirectReceiver;
 import esw.peeplotech.peerrecords.util.Common;
 import esw.peeplotech.peerrecords.util.Methods;
 import io.paperdb.Paper;
 
-public class StaffDashboard extends AppCompatActivity {
+public class StaffDashboard extends AppCompatActivity implements DeviceListener {
 
     //binding
     private ActivityStaffDashboardBinding activity;
@@ -43,6 +82,29 @@ public class StaffDashboard extends AppCompatActivity {
     //dialogs
     private AlertDialog connectionDialog;
 
+    //permission
+    private static final int VERIFY_PERMISSIONS_REQUEST = 757;
+
+    //P2P networking
+    private WifiManager wifiManager;
+    private WifiP2pManager wifiP2PManager;
+    private WifiP2pManager.Channel wifiP2PChannel;
+    private BroadcastReceiver mReceiver;
+    private IntentFilter intentFilter;
+    private boolean isWifiEnabled = false;
+    private List<WifiP2pDevice> peers = new ArrayList<>();
+    private String[] deviceNameArray;
+    private WifiP2pDevice[] deviceArray;
+    public WifiP2pManager.PeerListListener peerListListener;
+    private DeviceAdapter adapter;
+    public WifiP2pManager.ConnectionInfoListener connectionInfoListener;
+    private static final int MESSAGE_READ = 1;
+    private Handler handler;
+    private ServerClass serverClass;
+    private ClientClass clientClass;
+    private SendReceive sendReceive;
+    private RelativeLayout joinConnectionBtn, disconnectBtn;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +115,62 @@ public class StaffDashboard extends AppCompatActivity {
     }
 
     private void initialize() {
+
+        //request permission
+        requestPermission();
+
+        //network init
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        wifiP2PManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
+        wifiP2PChannel = wifiP2PManager.initialize(this, getMainLooper(), null);
+        mReceiver = new WifiDirectReceiver(wifiP2PManager, wifiP2PChannel, this);
+        isWifiEnabled = wifiManager.isWifiEnabled();
+
+        //intent filter init
+        intentFilter = new IntentFilter();
+        intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
+        intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+
+        //connection info listener
+        connectionInfoListener = info -> {
+            Paper.book().write(Common.CONNECTION_STATUS, Common.CONNECTION_CONNECTED);
+
+            //the info
+            final InetAddress groupOwnerAddress = info.groupOwnerAddress;
+
+            //check if i am host
+            if (info.isGroupOwner && info.groupFormed){
+
+                Paper.book().write(Common.CONNECTION_HOST, Common.HOST_ME);
+                serverClass = new ServerClass();
+                serverClass.start();
+
+            } else {
+
+                Paper.book().write(Common.CONNECTION_HOST, Common.HOST_NOT_ME);
+                clientClass = new ClientClass(groupOwnerAddress);
+                clientClass.start();
+
+            }
+        };
+
+        //handler
+        handler = new Handler(new Handler.Callback() {
+            @Override
+            public boolean handleMessage(@NonNull Message msg) {
+
+                switch (msg.what){
+                    case MESSAGE_READ:
+                        byte[] readBuff = (byte[]) msg.obj;
+                        String tempMsg = new String(readBuff, 0, msg.arg1);
+                        break;
+                }
+
+                return true;
+            }
+        });
 
         //get current user
         User currentUser = Paper.book().read(Common.CURRENT_USER);
@@ -93,16 +211,14 @@ public class StaffDashboard extends AppCompatActivity {
             popupInvalidate.inflate(R.menu.menu);
             popupInvalidate.setOnMenuItemClickListener(item -> {
 
-                if (item.getItemId() == R.id.action_logs){
+                if (item.getItemId() == R.id.action_logs) {
 
                     //go to connection logs
                     Intent logsIntent = new Intent(this, ConnectionLogs.class);
                     startActivity(logsIntent);
                     return true;
 
-                } else
-
-                if (item.getItemId() == R.id.action_logout){
+                } else if (item.getItemId() == R.id.action_logout) {
 
                     //end session
                     new Database(this).logoutSession(Paper.book().read(Common.CURRENT_SESSION), Methods.getTimestamp());
@@ -114,7 +230,7 @@ public class StaffDashboard extends AppCompatActivity {
 
                     //go to sign in
                     Intent logoutIntent = new Intent(this, SignIn.class);
-                    logoutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK|Intent.FLAG_ACTIVITY_NEW_TASK);
+                    logoutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(logoutIntent);
                     finish();
                     return true;
@@ -126,6 +242,74 @@ public class StaffDashboard extends AppCompatActivity {
             popupInvalidate.show();
 
         });
+    }
+
+    private void initCsvFileCarrier() {
+
+        //check if file exist in directory and create if not
+        File dir = new File(Environment.getExternalStorageDirectory(), Common.BASE_FOLDER);
+        if (dir.exists()) {
+            dir.mkdir();
+        }
+
+        //check if config file exists and create file if not
+        File newFile = new File(dir, Common.CSV_FILE);
+        try (FileWriter writer = new FileWriter(newFile, true)) {
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("record_id");
+            sb.append(',');
+            sb.append("staff_username");
+            sb.append(',');
+            sb.append("student_username");
+            sb.append(',');
+            sb.append("score");
+            sb.append(',');
+            sb.append("timestamp");
+            sb.append(',');
+            sb.append("record_status");
+            sb.append(',');
+            sb.append("record_reason");
+            sb.append('\n');
+
+            writer.write(sb.toString());
+
+        } catch (FileNotFoundException e) {
+            Toast.makeText(this, "File Not Available", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void requestPermission(){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
+
+            initCsvFileCarrier();
+
+        } else {
+
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, VERIFY_PERMISSIONS_REQUEST);
+
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
+        if (requestCode == VERIFY_PERMISSIONS_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                initCsvFileCarrier();
+
+            } else {
+
+                Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
+
+            }
+        }
+
     }
 
     private void setBaseFragment(MyRecords home) {
@@ -150,16 +334,14 @@ public class StaffDashboard extends AppCompatActivity {
 
         connectionDialog = new AlertDialog.Builder(this, R.style.DialogTheme).create();
         LayoutInflater inflater = this.getLayoutInflater();
-        View viewOptions = inflater.inflate(R.layout.connection_layout,null);
+        View viewOptions = inflater.inflate(R.layout.connection_layout, null);
 
         //widgets
-        RelativeLayout joinConnectionBtn = viewOptions.findViewById(R.id.joinConnectionBtn);
+        RecyclerView deviceRecycler = viewOptions.findViewById(R.id.deviceRecycler);
+        joinConnectionBtn = viewOptions.findViewById(R.id.joinConnectionBtn);
         TextView joinConnectionText = viewOptions.findViewById(R.id.joinConnectionText);
         AVLoadingIndicatorView joinConnectionProgress = viewOptions.findViewById(R.id.joinConnectionProgress);
-        RelativeLayout hostConnectionBtn = viewOptions.findViewById(R.id.hostConnectionBtn);
-        TextView hostConnectionText = viewOptions.findViewById(R.id.hostConnectionText);
-        AVLoadingIndicatorView hostConnectionProgress = viewOptions.findViewById(R.id.hostConnectionProgress);
-        RelativeLayout disconnectBtn = viewOptions.findViewById(R.id.disconnectBtn);
+        disconnectBtn = viewOptions.findViewById(R.id.disconnectBtn);
         TextView disconnectText = viewOptions.findViewById(R.id.disconnectText);
         AVLoadingIndicatorView disconnectProgress = viewOptions.findViewById(R.id.disconnectProgress);
 
@@ -176,11 +358,119 @@ public class StaffDashboard extends AppCompatActivity {
         //show dialog
         connectionDialog.show();
 
+        //disply btns
+        joinConnectionBtn.setVisibility(View.VISIBLE);
+
+        //join
+        joinConnectionBtn.setOnClickListener(v -> {
+
+            //start loading
+            joinConnectionBtn.setEnabled(false);
+            joinConnectionText.setVisibility(View.INVISIBLE);
+            joinConnectionProgress.setVisibility(View.VISIBLE);
+
+            //enable wifi if not enabled
+            if (!isWifiEnabled) {
+
+                wifiManager.setWifiEnabled(true);
+
+            }
+
+            //start peer listener
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            wifiP2PManager.discoverPeers(wifiP2PChannel, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    Toast.makeText(StaffDashboard.this, "Peer discovery started", Toast.LENGTH_SHORT).show();
+
+                    //manager populate
+                    peerListListener = peersList -> {
+                        if (!peersList.getDeviceList().equals(peers)) {
+
+                            //clear list
+                            peers.clear();
+
+                            //populate with new list
+                            peers.addAll(peersList.getDeviceList());
+
+                            //init recycler
+                            deviceRecycler.setHasFixedSize(true);
+                            deviceRecycler.setLayoutManager(new LinearLayoutManager(StaffDashboard.this));
+
+                            //adapter
+                            adapter = new DeviceAdapter(StaffDashboard.this, StaffDashboard.this, peers, StaffDashboard.this);
+                            deviceRecycler.setAdapter(adapter);
+                            adapter.notifyDataSetChanged();
+
+                        }
+
+                        if (peersList.getDeviceList().size() == 0) {
+                            Toast.makeText(StaffDashboard.this, "No device found", Toast.LENGTH_SHORT).show();
+                        }
+
+                        //stop loading
+                        joinConnectionBtn.setEnabled(true);
+                        joinConnectionProgress.setVisibility(View.INVISIBLE);
+                        joinConnectionText.setVisibility(View.VISIBLE);
+                    };
+                }
+
+                @Override
+                public void onFailure(int reason) {
+                    Toast.makeText(StaffDashboard.this, "Couldnt start peer discovery", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+        });
+
+        //disconnect
+        disconnectBtn.setOnClickListener(v -> {
+            wifiP2PManager.cancelConnect(wifiP2PChannel, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    joinConnectionBtn.setVisibility(View.VISIBLE);
+                    disconnectBtn.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onFailure(int reason) {
+
+                }
+            });
+
+            wifiManager.setWifiEnabled(false);
+        });
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        //register receiver
+        registerReceiver(mReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        //unregister receiver
+        unregisterReceiver(mReceiver);
     }
 
     @Override
     public void onBackPressed() {
-        if (!activity.getIsMyRecord()){
+        if (!activity.getIsMyRecord()) {
 
             setBaseFragment(myRecords);
 
@@ -190,4 +480,179 @@ public class StaffDashboard extends AppCompatActivity {
 
         }
     }
+
+    @Override
+    public void onDeviceClicked(WifiP2pDevice device) {
+        //setup connection config
+        WifiP2pConfig config = new WifiP2pConfig();
+        config.deviceAddress = device.deviceAddress;
+
+        //setup manager
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        wifiP2PManager.connect(wifiP2PChannel, config, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(StaffDashboard.this, "Connected to " + device.deviceName, Toast.LENGTH_SHORT).show();
+
+                joinConnectionBtn.setVisibility(View.GONE);
+                disconnectBtn.setVisibility(View.VISIBLE);
+
+                //write to csv
+                File dir = new File(Environment.getExternalStorageDirectory(), Common.BASE_FOLDER);
+                if (dir.exists()) {
+                    dir.mkdir();
+                }
+
+                //check if config file exists and create file if not
+                File newFile = new File(dir, Common.CSV_FILE);
+
+                //write to file
+                List<Record> recordList = new Database(StaffDashboard.this).getAllRecords();
+                for (Record theRecord : recordList){
+
+
+                    try (FileWriter writer = new FileWriter(newFile, true)) {
+
+                        StringBuilder sb = new StringBuilder();
+                        sb.append(theRecord.getRecord_id());
+                        sb.append(',');
+                        sb.append(theRecord.getStaff_username());
+                        sb.append(',');
+                        sb.append(theRecord.getStudent_username());
+                        sb.append(',');
+                        sb.append(theRecord.getScore());
+                        sb.append(',');
+                        sb.append(theRecord.getTimestamp());
+                        sb.append(',');
+                        sb.append(theRecord.getRecord_status());
+                        sb.append(',');
+                        sb.append(theRecord.getRecord_reason());
+                        sb.append('\n');
+
+                        writer.write(sb.toString());
+
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+
+                    }
+
+                }
+
+                //send file
+                sendReceive.writeData(newFile);
+
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Toast.makeText(StaffDashboard.this, "Connection to " + device.deviceName + " failed", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    public class ServerClass extends Thread {
+
+        //create socket
+        Socket socket;
+        ServerSocket serverSocket;
+
+        @Override
+        public void run() {
+            try {
+                serverSocket = new ServerSocket(8888);
+                socket = serverSocket.accept();
+                sendReceive = new SendReceive(socket);
+                sendReceive.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public class ClientClass extends Thread {
+
+        //create socket
+        Socket socket;
+        String hostAdd;
+
+        public ClientClass(InetAddress hostAddress){
+            hostAdd = hostAddress.getHostAddress();
+            socket = new Socket();
+        }
+
+        @Override
+        public void run() {
+            try {
+                socket.connect(new InetSocketAddress(hostAdd, 8888), 500);
+                sendReceive = new SendReceive(socket);
+                sendReceive.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public class SendReceive extends Thread {
+
+        //create socket
+        private Socket socket;
+        private InputStream inputStream;
+        private OutputStream outputStream;
+
+        public SendReceive(Socket skt){
+            socket = skt;
+
+            try {
+                inputStream = socket.getInputStream();
+                outputStream = socket.getOutputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+            byte[] buffer = new byte[1024];
+            int bytes;
+            while (socket != null){
+
+                try {
+                    bytes = inputStream.read(buffer);
+                    if (bytes > 0){
+                        handler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+
+        public void writeData(File csvFile){
+            try {
+                File dirs = new File(csvFile.getParent());
+                if (!dirs.exists())
+                    dirs.mkdirs();
+                csvFile.createNewFile();
+                InputStream inputstream = socket.getInputStream();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 }

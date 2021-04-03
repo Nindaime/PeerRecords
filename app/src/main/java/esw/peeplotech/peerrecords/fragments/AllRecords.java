@@ -27,6 +27,8 @@ import esw.peeplotech.peerrecords.R;
 import esw.peeplotech.peerrecords.adapters.AllRecordAdapter;
 import esw.peeplotech.peerrecords.databases.Database;
 import esw.peeplotech.peerrecords.models.Record;
+import esw.peeplotech.peerrecords.util.Common;
+import io.paperdb.Paper;
 
 public class AllRecords extends Fragment {
 
@@ -67,6 +69,8 @@ public class AllRecords extends Fragment {
     }
 
     private void initialize() {
+
+        checkIfConnected();
 
         //load stuff
         loadRecords();
@@ -143,6 +147,24 @@ public class AllRecords extends Fragment {
         adapter = new AllRecordAdapter(getActivity(), getContext(), recordList);
         recordRecycler.setAdapter(adapter);
         adapter.notifyDataSetChanged();
+
+    }
+
+    public void checkIfConnected(){
+
+        if (Paper.book().read(Common.CONNECTION_STATUS, Common.CONNECTION_CONNECTED).equals(Common.CONNECTION_CONNECTED)){
+
+            connectLayout.setVisibility(View.VISIBLE);
+            emptyLayout.setVisibility(View.GONE);
+
+        } else {
+
+            connectLayout.setVisibility(View.GONE);
+            emptyLayout.setVisibility(View.VISIBLE);
+
+        }
+
+        new Handler(Looper.myLooper()).postDelayed(() -> checkIfConnected(), 5000);
 
     }
 }

@@ -7,6 +7,16 @@ public class Common {
     public static final String CURRENT_USER = "CurrentUserData";
     public static final String CURRENT_SESSION = "CurrentUserSession";
 
+    //connection
+    public static final String CONNECTION_STATUS = "ConnectionStatus";
+    public static final String CONNECTION_CONNECTED = "Connected";
+    public static final String CONNECTION_DISCONNECTED = "Disconnected";
+
+    //connection host
+    public static final String CONNECTION_HOST = "ConnectionHost";
+    public static final String HOST_ME = "Host";
+    public static final String HOST_NOT_ME = "Client";
+
     //students
     public static final String STUDENTS_LIST = "The Students";
 
@@ -49,5 +59,8 @@ public class Common {
     //folder directories
     public static final String BASE_FOLDER = "Peer Records";
     public static final String AVATAR_FOLDER = "Avatars";
+
+    //file
+    public static final String CSV_FILE = "RecordShare.csv";
 
 }
