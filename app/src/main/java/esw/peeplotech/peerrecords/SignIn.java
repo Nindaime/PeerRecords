@@ -7,17 +7,20 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
+import java.util.Random;
+
 import esw.peeplotech.peerrecords.databases.Database;
 import esw.peeplotech.peerrecords.databinding.ActivitySignInBinding;
 import esw.peeplotech.peerrecords.models.User;
 import esw.peeplotech.peerrecords.staff.StaffDashboard;
-import esw.peeplotech.peerrecords.students.StudentDashboard;
 import esw.peeplotech.peerrecords.util.Common;
+import esw.peeplotech.peerrecords.util.Methods;
 import io.paperdb.Paper;
 
 public class SignIn extends AppCompatActivity {
@@ -26,7 +29,9 @@ public class SignIn extends AppCompatActivity {
     private ActivitySignInBinding activityBinding;
 
     //logged in
-    private String userId, userType;
+    private String userId;
+    private String sessionToken = "";
+    private String android_id;
 
     //loading
     private android.app.AlertDialog theDialog;
@@ -39,32 +44,28 @@ public class SignIn extends AppCompatActivity {
 
         //set data
         userId = Paper.book().read(Common.USER_ID);
-        userType = Paper.book().read(Common.USER_TYPE);
 
         //check if any user is logged in
         if (userId != null && !userId.isEmpty()){
 
-            if (userType.equals(Common.USER_TYPE_STUDENT)){
-
-                startActivity(new Intent(this, StudentDashboard.class));
-                finish();
-
-            } else {
-
-                startActivity(new Intent(this, StaffDashboard.class));
-                finish();
-
-            }
+            startActivity(new Intent(this, StaffDashboard.class));
+            finish();
 
         } else {
 
             //init
-            intialize();
+            initialize();
 
         }
     }
 
-    private void intialize() {
+    private void initialize() {
+
+        //generate session token
+        generateSessionToken();
+
+        //device id
+        android_id = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
 
         //register
         activityBinding.registerLink.setOnClickListener(v -> {
@@ -78,6 +79,40 @@ public class SignIn extends AppCompatActivity {
 
         });
 
+    }
+
+    private void generateSessionToken() {
+
+        //set token
+        String tempToken = generateRandomToken();
+
+        //get token
+        if (!new Database(this).isConnectionIdInUse(tempToken)){
+
+            sessionToken = tempToken;
+
+        } else {
+
+            generateSessionToken();
+
+        }
+
+
+    }
+
+    private String generateRandomToken(){
+        int leftLimit = 97; // letter 'a'
+        int rightLimit = 122; // letter 'z'
+        int targetStringLength = 9;
+        Random random = new Random();
+        StringBuilder buffer = new StringBuilder(targetStringLength);
+        for (int i = 0; i < targetStringLength; i++) {
+            int randomLimitedInt = leftLimit + (int)
+                    (random.nextFloat() * (rightLimit - leftLimit + 1));
+            buffer.append((char) randomLimitedInt);
+        }
+        String generatedString = buffer.toString();
+        return generatedString;
     }
 
     private void validate() {
@@ -142,20 +177,16 @@ public class SignIn extends AppCompatActivity {
 
     private void checkUserType(User currentUser) {
 
+        //sign in session
+        new Database(this).createNewSession(sessionToken, currentUser.getUsername(), android_id, 0, 0, Methods.getTimestamp(), "");
+
         //store in local
         Paper.book().write(Common.USER_ID, currentUser.getUsername());
-        Paper.book().write(Common.USER_TYPE, currentUser.getUser_type());
         Paper.book().write(Common.CURRENT_USER, currentUser);
+        Paper.book().write(Common.CURRENT_SESSION, sessionToken);
 
         //check
-        Intent dashboardIntent = null;
-
-        if (currentUser.getUser_type().equals(Common.USER_TYPE_STUDENT)){
-            dashboardIntent = new Intent(this, StudentDashboard.class);
-        } else {
-            dashboardIntent = new Intent(this, StaffDashboard.class);
-        }
-
+        Intent dashboardIntent = new Intent(this, StaffDashboard.class);
         dashboardIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(dashboardIntent);
         finish();

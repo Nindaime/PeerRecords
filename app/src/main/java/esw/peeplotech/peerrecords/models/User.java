@@ -4,17 +4,19 @@ public class User {
 
     private String username;
     private String password;
-    private String user_type;
     private String avatar;
+    private String sector;
+    private String staff_id;
 
     public User() {
     }
 
-    public User(String username, String password, String user_type, String avatar) {
+    public User(String username, String password, String avatar, String sector, String staff_id) {
         this.username = username;
         this.password = password;
-        this.user_type = user_type;
         this.avatar = avatar;
+        this.sector = sector;
+        this.staff_id = staff_id;
     }
 
     public String getUsername() {
@@ -33,19 +35,27 @@ public class User {
         this.password = password;
     }
 
-    public String getUser_type() {
-        return user_type;
-    }
-
-    public void setUser_type(String user_type) {
-        this.user_type = user_type;
-    }
-
     public String getAvatar() {
         return avatar;
     }
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public String getSector() {
+        return sector;
+    }
+
+    public void setSector(String sector) {
+        this.sector = sector;
+    }
+
+    public String getStaff_id() {
+        return staff_id;
+    }
+
+    public void setStaff_id(String staff_id) {
+        this.staff_id = staff_id;
     }
 }

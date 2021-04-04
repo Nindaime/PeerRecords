@@ -4,48 +4,63 @@ public class Common {
 
     //user details
     public static final String USER_ID = "UserId";
-    public static final String USER_TYPE = "UserType";
     public static final String CURRENT_USER = "CurrentUserData";
+    public static final String CURRENT_SESSION = "CurrentUserSession";
+
+    //connection
+    public static final String CONNECTION_STATUS = "ConnectionStatus";
+    public static final String CONNECTION_CONNECTED = "Connected";
+    public static final String CONNECTION_DISCONNECTED = "Disconnected";
+
+    //connection host
+    public static final String CONNECTION_HOST = "ConnectionHost";
+    public static final String HOST_ME = "Host";
+    public static final String HOST_NOT_ME = "Client";
+
+    //students
+    public static final String STUDENTS_LIST = "The Students";
+
+    //intents
+    public static final String INTENT_STUDENT = "StudentData";
 
     //notification
     public static final String DEFAULT_NOTIFICATION_CHANNEL = "esw.peeplotech.peerrecords.DEFAULT_NOTIFICATION";
 
-    //user type
-    public static final String USER_TYPE_STAFF = "Staff";
-    public static final String USER_TYPE_STUDENT = "Student";
-
     //staff sectors
-    public static final String SECTOR_ADMIN = "Admin";
-    public static final String SECTOR_ACADEMIC = "Academic";
+    public static final String SECTOR_ACADEMIC = "Academics";
     public static final String SECTOR_HOSTEL = "Hostel";
-    public static final String SECTOR_SPORT = "Sport";
+    public static final String SECTOR_CLASS = "Class Activity";
     public static final String SECTOR_BURSARY = "Bursary";
 
+    //academic reasons
+    public static final String ACADEMIC_REASON_PERFORMANCE = "Improved Performance";
+    public static final String ACADEMIC_REASON_RESULT = "Best Result";
+    public static final String ACADEMIC_REASON_STANDING = "Good Academic Standing";
+    public static final String ACADEMIC_REASON_ASSIGNMENT = "Assignment Performance";
+
+    //hostel reasons
+    public static final String HOSTEL_REASON_HYGIENE = "Personal Hygiene";
+    public static final String HOSTEL_REASON_RULES = "Rule Adherence";
+    public static final String HOSTEL_REASON_SANITATION = "Sanitation";
+
+    //class activity reasons
+    public static final String CLASS_REASON_ATTENDANCE = "Good Attendance";
+    public static final String CLASS_REASON_GROUP = "Group Performance";
+    public static final String CLASS_REASON_ENGAGEMENT = "Class Engagement";
+
+    //bursary reasons
+    public static final String BURSARY_REASON_EARLY = "Early Payment";
+    public static final String BURSARY_REASON_FULL = "Full Payment";
+
+    //record status
+    public static final String RECORD_AWARDED = "Awarded";
+    public static final String RECORD_DEDUCTED = "Deducted";
+
     //folder directories
-    public static final String BASE_FOLDER = "Studygroup";
+    public static final String BASE_FOLDER = "Peer Records";
     public static final String AVATAR_FOLDER = "Avatars";
-    public static final String COURSE_THUMB_FOLDER = "Course Thumbs";
-    public static final String MODULE_FOLDER = "Course Modules";
-    public static final String ASSIGNMENT_FOLDER = "Course Assignments";
-    public static final String SUBMITTED_ASSIGNMENT_FOLDER = "Submitted Assignments";
 
-    //intent
-    public static final String INTENT_COURSE = "CourseId";
-    public static final String INTENT_MODULE = "ModuleId";
-    public static final String INTENT_ASSIGNMENT = "AssignmentId";
-
-    //subscription type strings
-    public static final String IS_SUBSCRIBED = "UnRegister";
-    public static final String NOT_SUBSCRIBED = "Register";
-
-    //message approvals
-    public static final String IS_APPROVED = "Approved";
-    public static final String NOT_APPROVED = "Unapproved";
-
-    //dynamic table suffixes
-    public static final String MODULE_CHAT = "_MODULE_CHAT";
-    public static final String ASSIGNMENT_CHAT = "_ASSIGNMENT_CHAT";
-    public static final String SUBMITTED_ASSIGNMENT = "_SUBMITTED_ASSIGNMENT";
-    public static final String ASSESSMENT = "_ASSESSMENT";
+    //file
+    public static final String CSV_FILE = "RecordShare.csv";
 
 }
