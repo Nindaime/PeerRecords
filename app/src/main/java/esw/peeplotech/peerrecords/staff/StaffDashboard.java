@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -84,6 +85,7 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
 
     //permission
     private static final int VERIFY_PERMISSIONS_REQUEST = 757;
+    private static final int VERIFY_LOCATION_REQUEST = 7598;
 
     //P2P networking
     private WifiManager wifiManager;
@@ -308,6 +310,18 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
                 Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
 
             }
+        } else
+
+        if (requestCode == VERIFY_LOCATION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                Toast.makeText(this, "Permission granted, please try again", Toast.LENGTH_SHORT).show();
+
+            } else {
+
+                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+
+            }
         }
 
     }
@@ -370,65 +384,66 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
             joinConnectionProgress.setVisibility(View.VISIBLE);
 
             //enable wifi if not enabled
-            if (!isWifiEnabled) {
-
-                wifiManager.setWifiEnabled(true);
-
-            }
+            wifiManager.setWifiEnabled(true);
 
             //start peer listener
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
+            //check permissions
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+
+                wifiP2PManager.discoverPeers(wifiP2PChannel, new WifiP2pManager.ActionListener() {
+                    @Override
+                    public void onSuccess() {
+                        Toast.makeText(StaffDashboard.this, "Peer discovery started", Toast.LENGTH_SHORT).show();
+
+                        //manager populate
+                        peerListListener = peersList -> {
+                            if (!peersList.getDeviceList().equals(peers)) {
+
+                                //clear list
+                                peers.clear();
+
+                                //populate with new list
+                                peers.addAll(peersList.getDeviceList());
+
+                                //init recycler
+                                deviceRecycler.setHasFixedSize(true);
+                                deviceRecycler.setLayoutManager(new LinearLayoutManager(StaffDashboard.this));
+
+                                //adapter
+                                adapter = new DeviceAdapter(StaffDashboard.this, StaffDashboard.this, peers, StaffDashboard.this);
+                                deviceRecycler.setAdapter(adapter);
+                                adapter.notifyDataSetChanged();
+
+                            }
+
+                            if (peersList.getDeviceList().size() == 0) {
+                                Toast.makeText(StaffDashboard.this, "No device found", Toast.LENGTH_SHORT).show();
+                            }
+
+                            //stop loading
+                            joinConnectionBtn.setEnabled(true);
+                            joinConnectionProgress.setVisibility(View.INVISIBLE);
+                            joinConnectionText.setVisibility(View.VISIBLE);
+                        };
+                    }
+
+                    @Override
+                    public void onFailure(int reason) {
+                        Toast.makeText(StaffDashboard.this, "Couldnt start peer discovery because: " + reason, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+            } else {
+
+                //stop loading
+                joinConnectionBtn.setEnabled(true);
+                joinConnectionProgress.setVisibility(View.INVISIBLE);
+                joinConnectionText.setVisibility(View.VISIBLE);
+
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, VERIFY_PERMISSIONS_REQUEST);
+
             }
-            wifiP2PManager.discoverPeers(wifiP2PChannel, new WifiP2pManager.ActionListener() {
-                @Override
-                public void onSuccess() {
-                    Toast.makeText(StaffDashboard.this, "Peer discovery started", Toast.LENGTH_SHORT).show();
 
-                    //manager populate
-                    peerListListener = peersList -> {
-                        if (!peersList.getDeviceList().equals(peers)) {
-
-                            //clear list
-                            peers.clear();
-
-                            //populate with new list
-                            peers.addAll(peersList.getDeviceList());
-
-                            //init recycler
-                            deviceRecycler.setHasFixedSize(true);
-                            deviceRecycler.setLayoutManager(new LinearLayoutManager(StaffDashboard.this));
-
-                            //adapter
-                            adapter = new DeviceAdapter(StaffDashboard.this, StaffDashboard.this, peers, StaffDashboard.this);
-                            deviceRecycler.setAdapter(adapter);
-                            adapter.notifyDataSetChanged();
-
-                        }
-
-                        if (peersList.getDeviceList().size() == 0) {
-                            Toast.makeText(StaffDashboard.this, "No device found", Toast.LENGTH_SHORT).show();
-                        }
-
-                        //stop loading
-                        joinConnectionBtn.setEnabled(true);
-                        joinConnectionProgress.setVisibility(View.INVISIBLE);
-                        joinConnectionText.setVisibility(View.VISIBLE);
-                    };
-                }
-
-                @Override
-                public void onFailure(int reason) {
-                    Toast.makeText(StaffDashboard.this, "Couldnt start peer discovery", Toast.LENGTH_SHORT).show();
-                }
-            });
 
         });
 

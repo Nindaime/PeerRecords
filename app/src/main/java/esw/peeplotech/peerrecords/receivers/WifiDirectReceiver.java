@@ -7,10 +7,15 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.view.View;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
+import esw.peeplotech.peerrecords.adapters.DeviceAdapter;
 import esw.peeplotech.peerrecords.staff.StaffDashboard;
 import esw.peeplotech.peerrecords.util.Common;
 import io.paperdb.Paper;
@@ -20,6 +25,8 @@ public class WifiDirectReceiver extends BroadcastReceiver {
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
     private StaffDashboard staffDashboard;
+
+    private static final int VERIFY_LOCATION_REQUEST = 7598;
 
     public WifiDirectReceiver(WifiP2pManager mManager, WifiP2pManager.Channel mChannel, StaffDashboard staffDashboard) {
         this.mManager = mManager;
@@ -49,17 +56,16 @@ public class WifiDirectReceiver extends BroadcastReceiver {
         } else if (action.equals(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)) {
 
             if (mManager != null) {
-                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return;
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+
+                    mManager.requestPeers(mChannel, staffDashboard.peerListListener);
+
+                } else {
+
+                    Toast.makeText(context, "Grant location permission access first", Toast.LENGTH_SHORT).show();
+
                 }
-                mManager.requestPeers(mChannel, staffDashboard.peerListListener);
+
             }
 
         } else
@@ -88,4 +94,5 @@ public class WifiDirectReceiver extends BroadcastReceiver {
         }
 
     }
+
 }
