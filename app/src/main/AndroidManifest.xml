@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
         android:name=".util.AppClass"
@@ -24,11 +23,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:replace="android:icon">
-        <receiver
-            android:name=".receivers.WifiDirectReceiver"
-            android:enabled="true"
-            android:exported="true"
-            tools:ignore="Instantiatable"></receiver>
 
         <activity android:name=".students.StudentDetails" />
         <activity android:name=".staff.ConnectionLogs" />
