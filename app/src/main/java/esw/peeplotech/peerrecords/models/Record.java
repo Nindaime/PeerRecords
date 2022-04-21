@@ -1,7 +1,5 @@
 package esw.peeplotech.peerrecords.models;
 
-import esw.peeplotech.peerrecords.fragments.MyRecords;
-
 public class Record {
 
     private String record_id;

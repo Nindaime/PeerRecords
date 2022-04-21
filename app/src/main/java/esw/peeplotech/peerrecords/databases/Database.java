@@ -185,6 +185,45 @@ public class Database extends SQLiteAssetHelper {
         db.execSQL(query);
     }
 
+    //get record data
+    public Record getRecordDetails(String recordId){
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = null;
+        String SQLQuery = String.format("SELECT * FROM " + RECORDS_TABLE + " WHERE record_id = '%s';", recordId);
+
+        //make null user
+        Record currentRecord = null;
+
+        //run query
+        cursor = db.rawQuery(SQLQuery, null);
+
+        //check again if data exists
+        if (cursor.getCount() > 0){
+
+            cursor.moveToFirst();
+            currentRecord = new Record(
+                    cursor.getString(cursor.getColumnIndex("record_id")),
+                    cursor.getString(cursor.getColumnIndex("staff_username")),
+                    cursor.getString(cursor.getColumnIndex("student_username")),
+                    cursor.getInt(cursor.getColumnIndex("score")),
+                    cursor.getString(cursor.getColumnIndex("timestamp")),
+                    cursor.getString(cursor.getColumnIndex("record_status")),
+                    cursor.getString(cursor.getColumnIndex("record_reason"))
+            );
+
+        }
+        cursor.close();
+
+        return currentRecord;
+    }
+
+    //update record
+    public void updateRecord(String recordId, String timestamp, String record_status){
+        SQLiteDatabase db = getReadableDatabase();
+        @SuppressLint("DefaultLocale") String query = String.format("UPDATE " + RECORDS_TABLE + " SET timestamp = '%s', record_status = '%s'  WHERE record_id = '%s';", timestamp, record_status, recordId);
+        db.execSQL(query);
+    }
+
     //deduct record
     public void deductRecord(String record_id, String record_status, String timestamp){
         SQLiteDatabase db = getReadableDatabase();

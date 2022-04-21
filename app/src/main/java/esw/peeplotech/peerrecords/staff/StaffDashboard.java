@@ -14,12 +14,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -39,11 +41,13 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.opencsv.CSVReader;
 import com.wang.avi.AVLoadingIndicatorView;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,8 +56,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Timestamp;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import esw.peeplotech.peerrecords.R;
@@ -107,10 +114,16 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
     private SendReceive sendReceive;
     private RelativeLayout joinConnectionBtn, disconnectBtn;
 
+    //values
+    private String myUsername;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         activity = DataBindingUtil.setContentView(this, R.layout.activity_staff_dashboard);
+
+        //value
+        myUsername = Paper.book().read(Common.USER_ID);
 
         //init
         initialize();
@@ -172,6 +185,7 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
 
                 return true;
             }
+
         });
 
         //get current user
@@ -384,7 +398,9 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
             joinConnectionProgress.setVisibility(View.VISIBLE);
 
             //enable wifi if not enabled
-            wifiManager.setWifiEnabled(true);
+            if (!wifiManager.isWifiEnabled()) {
+                wifiManager.setWifiEnabled(true);
+            }
 
             //start peer listener
             //check permissions
@@ -555,6 +571,9 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
 
                         writer.write(sb.toString());
 
+                        //send file
+                        sendReceive.writeData(newFile);
+
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
 
@@ -564,9 +583,6 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
                     }
 
                 }
-
-                //send file
-                sendReceive.writeData(newFile);
 
             }
 
@@ -644,29 +660,164 @@ public class StaffDashboard extends AppCompatActivity implements DeviceListener 
             while (socket != null){
 
                 try {
-                    bytes = inputStream.read(buffer);
-                    if (bytes > 0){
-                        handler.obtainMessage(MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+                    //write to csv
+                    File dir = new File(Environment.getExternalStorageDirectory(), Common.BASE_FOLDER);
+                    if (dir.exists()) {
+                        dir.mkdir();
                     }
+
+                    //check if config file exists and create file if not
+                    File newFile = new File(dir, Common.CSV_FILE);
+
+                    File dirs = new File(newFile.getParent());
+                    if (!dirs.exists())
+                        dirs.mkdirs();
+                    newFile.createNewFile();
+                    InputStream inputstream = socket.getInputStream();
+                    copyFile(inputstream, new FileOutputStream(newFile));
+                    socket.close();
+
+
+                    //open file and do check algorithm
+                    compareDataAlgo(newFile);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+
 
             }
         }
 
         public void writeData(File csvFile){
+            int port;
+            int len;
+            byte buf[]  = new byte[1024];
+
             try {
-                File dirs = new File(csvFile.getParent());
-                if (!dirs.exists())
-                    dirs.mkdirs();
-                csvFile.createNewFile();
-                InputStream inputstream = socket.getInputStream();
+
+
+                OutputStream outputStream = socket.getOutputStream();
+                ContentResolver cr = StaffDashboard.this.getContentResolver();
+                InputStream inputStream = null;
+                inputStream = cr.openInputStream(Uri.parse(csvFile.getAbsolutePath()));
+                while ((len = inputStream.read(buf)) != -1) {
+                    outputStream.write(buf, 0, len);
+                }
+                outputStream.close();
+                inputStream.close();
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void compareDataAlgo(File newFile) {
+
+        try {
+            CSVReader reader = new CSVReader(new FileReader(newFile));
+            String[] nextLine;
+            int count = 0;
+            reader.readNext();
+
+            while ((nextLine = reader.readNext()) != null) {
+                // nextLine[] is an array of values from the line
+                count++;
+
+                if (nextLine.length == 7) {
+
+                    if (!new Database(this).isRecordIdInUse(nextLine[0]) ) {
+
+                        new Database(this).createNewRecord(nextLine[0], nextLine[1], nextLine[2], Integer.parseInt(nextLine[3]), nextLine[4], nextLine[5], nextLine[6]);
+
+                    } else {
+
+                        if (!myUsername.equals(nextLine[1])){
+
+                            //my record
+                            Record theRecord = new Database(StaffDashboard.this).getRecordDetails(nextLine[0]);
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+                            Date parsedDate = dateFormat.parse(theRecord.getTimestamp());
+                            Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
+
+                            //foreign
+                            Date parsedForeignDate = dateFormat.parse(nextLine[4]);
+                            Timestamp foreignTimestamp = new java.sql.Timestamp(parsedForeignDate.getTime());
+
+                            //check time
+                            if (foreignTimestamp.after(timestamp)){
+
+                                new Database(StaffDashboard.this).updateRecord(nextLine[0], nextLine[4], nextLine[5]);
+
+                            }
+
+                        }
+
+                    }
+                }
+
+            }
+
+        } catch (IOException | ParseException e) {
+        }
+
+
+        //write to file
+        List<Record> recordList = new Database(StaffDashboard.this).getAllRecords();
+        for (Record theRecord : recordList){
+
+
+            try (FileWriter writer = new FileWriter(newFile, true)) {
+
+                StringBuilder sb = new StringBuilder();
+                sb.append(theRecord.getRecord_id());
+                sb.append(',');
+                sb.append(theRecord.getStaff_username());
+                sb.append(',');
+                sb.append(theRecord.getStudent_username());
+                sb.append(',');
+                sb.append(theRecord.getScore());
+                sb.append(',');
+                sb.append(theRecord.getTimestamp());
+                sb.append(',');
+                sb.append(theRecord.getRecord_status());
+                sb.append(',');
+                sb.append(theRecord.getRecord_reason());
+                sb.append('\n');
+
+                writer.write(sb.toString());
+
+                //send file
+                sendReceive.writeData(newFile);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+
+            }
+
+        }
+
+
+    }
+
+    public static boolean copyFile(InputStream inputStream, OutputStream out) {
+        byte buf[] = new byte[1024];
+        int len;
+        try {
+            while ((len = inputStream.read(buf)) != -1) {
+                out.write(buf, 0, len);
+            }
+            out.close();
+            inputStream.close();
+        } catch (IOException e) {
+            return false;
+        }
+        return true;
     }
 
 

@@ -168,6 +168,8 @@ public class StudentDetails extends AppCompatActivity {
 
                 awardPoints(thePoint);
 
+                awardDialog.dismiss();
+
             }
 
         });
